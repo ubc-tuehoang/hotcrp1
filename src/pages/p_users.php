@@ -37,7 +37,7 @@ class Users_Page {
             $this->limits["pcadmin"] = ["label" => "PC and system administrators", "exclude" => true];
         }
         if ($viewer->is_manager()
-            || ($viewer->isPC && $this->conf->setting("pc_seeallrev"))) {
+            || ($viewer->isPC && $this->conf->setting("viewrev") > 0)) {
             $this->limits["re"] = "All reviewers";
             $this->limits["ext"] = "External reviewers";
             $this->limits["extsub"] = "External reviewers who completed a review";
@@ -49,22 +49,22 @@ class Users_Page {
         if ($viewer->is_manager()
             || ($viewer->isPC
                 && $this->conf->submission_blindness() !== Conf::BLIND_ALWAYS)) {
-            $this->limits["au"] = "Contact authors of submitted papers";
+            $this->limits["au"] = "Contact authors of submitted applications";
         }
         if ($viewer->is_manager()
             || ($viewer->isPC
                 && $viewer->can_view_some_decision()
                 && $viewer->can_view_some_authors())) {
-            $this->limits["auacc"] = ["label" => "Contact authors of accepted papers", "exclude" => !$this->conf->has_any_accepted()];
+            $this->limits["auacc"] = ["label" => "Contact authors of accepted applications", "exclude" => !$this->conf->has_any_accepted()];
         }
         if ($viewer->is_manager()
             || ($viewer->isPC
                 && $viewer->can_view_some_decision()
                 && $this->conf->submission_blindness() !== Conf::BLIND_ALWAYS)) {
-            $this->limits["aurej"] = "Contact authors of rejected papers";
+            $this->limits["aurej"] = "Contact authors of rejected applications";
         }
         if ($viewer->is_manager()) {
-            $this->limits["auuns"] = "Contact authors of non-submitted papers";
+            $this->limits["auuns"] = "Contact authors of non-submitted applications";
         }
         if ($viewer->privChair) {
             $this->limits["all"] = "Active users";
@@ -220,23 +220,23 @@ class Users_Page {
         if ($modifyfn === "disableaccount") {
             $j = UserActions::disable($this->viewer, $this->papersel);
             if ($j->disabled_users ?? false) {
-                $ms->success($this->conf->_("<0>Disabled accounts %#s", $j->disabled_users));
+                $ms->success($this->conf->_("<0>Disabled accounts {:list}", $j->disabled_users));
             }
         } else if ($modifyfn === "enableaccount") {
             $j = UserActions::enable($this->viewer, $this->papersel);
             if ($j->enabled_users ?? false) {
-                $ms->success($this->conf->_("<0>Enabled accounts %#s", $j->enabled_users));
+                $ms->success($this->conf->_("<0>Enabled accounts {:list}", $j->enabled_users));
             }
             if ($j->activated_users ?? false) {
-                $ms->success($this->conf->_("<0>Activated accounts and sent mail to %#s", $j->activated_users));
+                $ms->success($this->conf->_("<0>Activated accounts and sent mail to {:list}", $j->activated_users));
             }
         } else if ($modifyfn === "sendaccount") {
             $j = UserActions::send_account_info($this->viewer, $this->papersel);
             if ($j->mailed_users ?? false) {
-                $ms->success($this->conf->_("<0>Sent account information mail to %#s", $j->mailed_users));
+                $ms->success($this->conf->_("<0>Sent account information mail to {:list}", $j->mailed_users));
             }
             if ($j->skipped_users ?? false) {
-                $ms->msg_at(null, $this->conf->_("<0>Skipped disabled accounts %#s", $j->skipped_users), MessageSet::WARNING_NOTE);
+                $ms->msg_at(null, $this->conf->_("<0>Skipped disabled accounts {:list}", $j->skipped_users), MessageSet::WARNING_NOTE);
             }
         } else {
             return false;
@@ -260,8 +260,8 @@ class Users_Page {
                 /* nada */
             } else if (!($t = $tagger->check($t, Tagger::NOPRIVATE))) {
                 $ms->error_at(null, $tagger->error_ftext());
-            } else if (in_array(strtolower(Tagger::base($t)), ["pc", "admin", "chair"])) {
-                $ms->error_at(null, $this->conf->_("<0>User tag ‘{}’ reserved", Tagger::base($t)));
+            } else if (in_array(strtolower(Tagger::tv_tag($t)), ["pc", "admin", "chair"])) {
+                $ms->error_at(null, $this->conf->_("<0>User tag ‘{}’ reserved", Tagger::tv_tag($t)));
             } else {
                 $t1[] = $t;
             }

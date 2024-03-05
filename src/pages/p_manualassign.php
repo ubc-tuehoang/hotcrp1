@@ -35,7 +35,7 @@ class ManualAssign_Page {
         foreach ($this->viewer->paper_set(["paperId" => $pids, "reviewSignatures" => true]) as $row) {
             $name = "assrev{$row->paperId}u{$rcid}";
             if (!isset($this->qreq[$name])
-                || ($assrev = cvtint($this->qreq[$name], null)) === null) {
+                || ($assrev = stoi($this->qreq[$name])) === null) {
                 continue;
             }
 
@@ -126,7 +126,7 @@ class ManualAssign_Page {
         foreach ($reviewer->aucollab_matchers() as $matcher) {
             $text = "match:\"" . str_replace("\"", "", $matcher->name(NAME_P|NAME_A)) . "\"";
             $hlsearch[] = "au" . $text;
-            if (!$matcher->nonauthor && $this->conf->setting("sub_collab")) {
+            if (!$matcher->is_nonauthor() && $this->conf->setting("sub_collab")) {
                 $hlsearch[] = "co" . $text;
             }
         }
@@ -150,11 +150,11 @@ class ManualAssign_Page {
         // Conflict information
         $any = false;
         foreach ($reviewer->collaborator_generator() as $m) {
-            echo ($any ? ';</span> ' : '<div class="f-i"><label>Collaborators</label>'),
-                '<span class="nw">', $m->name_h(NAME_A);
+            echo ($any ? "" : "<div class=\"f-i\"><label>Collaborators</label><ul class=\"semi\">"),
+                '<li>', $m->name_h(NAME_A), '</li>';
             $any = true;
         }
-        echo $any ? '</span></div>' : '';
+        echo $any ? '</ul></div>' : '';
 
         $show = " show:au" . ($this->conf->setting("sub_collab") ? " show:co" : "");
         echo '<div class="f-i">',
@@ -173,7 +173,7 @@ class ManualAssign_Page {
         $pl = new PaperList("reviewAssignment", $search, ["sort" => true], $this->qreq);
         $pl->apply_view_session($this->qreq);
         $pl->apply_view_qreq($this->qreq);
-        echo Ht::form($this->conf->hoturl("=manualassign", ["reviewer" => $reviewer->email, "sort" => $this->qreq->sort]), ["class" => "assignpc ignore-diff"]),
+        echo Ht::form($this->conf->hoturl("=manualassign", ["reviewer" => $reviewer->email, "sort" => $this->qreq->sort]), ["class" => "need-diff-check assignpc ignore-diff"]),
             Ht::hidden("t", $this->qreq->t),
             Ht::hidden("q", $this->qreq->q);
         $rev_rounds = $this->conf->round_selector_options(false);
@@ -202,7 +202,7 @@ class ManualAssign_Page {
             Ht::submit("update", "Save assignments", ["class" => "btn-primary big"]), '</div></div>';
         echo '</div>';
 
-        $pl->set_table_id_class("foldpl", null);
+        $pl->set_table_id_class("pl", null);
         $pl->set_table_decor(PaperList::DECOR_HEADER | PaperList::DECOR_LIST | PaperList::DECOR_FULLWIDTH);
         echo '<div class="pltable-fullw-container demargin">';
         $pl->print_table_html();
@@ -211,7 +211,7 @@ class ManualAssign_Page {
         echo '<div class="aab aabr aabig mt-2"><div class="aabut">',
             Ht::submit("update", "Save assignments", ["class" => "btn-primary"]),
             "</div></div></form>\n";
-        Ht::stash_script('hotcrp.highlight_form_children("form.assignpc");$("#assrevimmediate").trigger("change");'
+        Ht::stash_script('$("form.assignpc").awaken();$("#assrevimmediate").trigger("change");'
             . "$(\"#showau\").on(\"change\", function () { hotcrp.foldup.call(this, null, {n:10}) })");
     }
 
@@ -230,7 +230,7 @@ class ManualAssign_Page {
 <p>Assignment methods:</p>
 <ul><li><a href="', $this->conf->hoturl("autoassign"), '">Automatic</a></li>
  <li><a href="', $this->conf->hoturl("manualassign"), '" class="q"><strong>Manual by PC member</strong></a></li>
- <li><a href="', $this->conf->hoturl("assign"), '">Manual by paper</a></li>
+ <li><a href="', $this->conf->hoturl("assign"), '">Manual by application</a></li>
  <li><a href="', $this->conf->hoturl("conflictassign"), '">Potential conflicts</a></li>
  <li><a href="', $this->conf->hoturl("bulkassign"), '">Bulk update</a></li>
 </ul>
@@ -241,10 +241,10 @@ class ManualAssign_Page {
   <dt>', review_type_icon(REVIEW_PC), ' Optional</dt><dd>May be declined</dd>
   <dt>', review_type_icon(REVIEW_META), ' Metareview</dt><dd>Can view all other reviews before completing their own</dd></dl>
 <hr>
-<dl><dt>Potential conflicts</dt><dd>Matches between PC member collaborators and paper authors, or between PC member and paper authors or collaborators</dd>
+<dl><dt>Potential conflicts</dt><dd>Matches between PC member collaborators and application authors, or between PC member and application authors or collaborators</dd>
   <dt>Preference</dt><dd><a href="', $this->conf->hoturl("reviewprefs"), '">Review preference</a></dd>
-  <dt>Topic score</dt><dd>High value means PC member has interest in many paper topics</dd>
-  <dt>Desirability</dt><dd>High values mean many PC members want to review the paper</dd></dl>
+  <dt>Topic score</dt><dd>High value means PC member has interest in many application topics</dd>
+  <dt>Desirability</dt><dd>High values mean many PC members want to review the application</dd></dl>
 <p>Click a heading to sort.</p></div></div>';
 
         echo '<h2 class="mt-3">Assignments ';
@@ -258,8 +258,8 @@ class ManualAssign_Page {
 
         // Change PC member
         echo "<table><tr><td><div class=\"assignpc_pcsel\">",
-            Ht::form($this->conf->hoturl("manualassign"), ["method" => "get", "id" => "selectreviewerform"]);
-        Ht::stash_script('hotcrp.highlight_form_children("#selectreviewerform")');
+            Ht::form($this->conf->hoturl("manualassign"), ["method" => "get", "id" => "selectreviewerform", "class" => "need-diff-check"]);
+        Ht::stash_script('$("#selectreviewerform").awaken()');
 
         $acs = AssignmentCountSet::load($this->viewer, AssignmentCountSet::HAS_REVIEW);
         $rev_opt = [];
@@ -276,7 +276,7 @@ class ManualAssign_Page {
             "<tr><td colspan=\"2\"><hr class=\"g\"></td></tr>\n";
 
         // Paper selection
-        echo "<tr><td>Paper selection: &nbsp;</td><td>",
+        echo "<tr><td>Application selection: &nbsp;</td><td>",
             Ht::entry("q", $this->qreq->q, [
                 "id" => "manualassignq", "size" => 40, "placeholder" => "(All)",
                 "class" => "papersearch want-focus need-suggest", "aria-label" => "Search",

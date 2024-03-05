@@ -10,7 +10,7 @@ RUN apt-get update && \
 	libicu-dev libgmp-dev \
 	re2c libmhash-dev \
 	libmcrypt-dev file \
-	poppler-utils
+	poppler-utils netcat-openbsd
 
 RUN apt-get install -y -q --no-install-recommends \
 		msmtp
@@ -30,7 +30,6 @@ RUN rm -rf /var/lib/apt/lists/*
 
 COPY docker/www.conf /usr/local/etc/php-fpm.d/
 COPY docker/php.ini /usr/local/etc/php/
-COPY docker/hotcrp-options.php /var/www/html/conf/options.php
 COPY --chmod=755 docker/docker-entrypoint.sh /docker-entrypoint.sh
 COPY . /var/www/html
 
